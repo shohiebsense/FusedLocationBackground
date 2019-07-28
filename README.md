@@ -19,3 +19,31 @@ dependencies{
 }
 ```
 Usage
+
+In your activity file, implement LocationService.LocationServiceListener :
+
+```
+  lateinit var locationService : LocationService
+
+   override fun onCreate(savedInstanceState: Bundle?) {
+          locationService = LocationService(this,this).init()
+   }
+   
+    override fun onResume() {
+        super.onResume()
+        locationService.onResume()
+    }
+
+    override fun onDestroy() {
+        locationService.onDestroy()
+        super.onDestroy()
+    }
+    
+     override fun onGettingLocation(isImmediateExit: Boolean, time: String, latitude: String, longitude: String) {
+        //this is called when the fused location service updates according to its interval..
+     }
+
+
+ ```
+ 
+ 
