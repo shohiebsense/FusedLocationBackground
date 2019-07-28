@@ -1,1 +1,1 @@
-include ':app', ':loclib'
+include ':sample', ':loclib'
