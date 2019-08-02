@@ -34,6 +34,10 @@ class PreferenceManager(val context: Context) {
         save(Constants.KEY_LONGITUDE, longitude)
     }
 
+    fun saveDate(time : String){
+        save(Constants.KEY_DATE, time)
+    }
+
     fun saveTime(time : String){
         save(Constants.KEY_TIME, time)
     }
@@ -52,6 +56,10 @@ class PreferenceManager(val context: Context) {
 
     fun getTime() : String {
         return "${sharedPreference.getString(Constants.KEY_TIME, "")}"
+    }
+
+    fun getDate() : String {
+        return "${sharedPreference.getString(Constants.KEY_DATE, "")}"
     }
 
     fun getIsRequesting() : Boolean {

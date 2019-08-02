@@ -5,6 +5,7 @@ object Constants {
     val KEY_LATITUDE_ = "FLBG_LATITUDE"
     val KEY_LONGITUDE = "FLBG_LONGITUDE"
     val KEY_TIME = "FLBG_TIME"
+    val KEY_DATE = "FLBG_DATE"
     val KEY_IS_REQUESTING = "FLBG_IS_REQUESTING"
 
 }

@@ -24,4 +24,9 @@ class FusedLocationResult(val context : Context) {
     fun getTime() : String{
         return preferenceManager.getTime()
     }
+
+    fun getDate() : String{
+        return preferenceManager.getDate()
+    }
+
 }

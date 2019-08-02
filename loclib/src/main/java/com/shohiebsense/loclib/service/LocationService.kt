@@ -3,10 +3,12 @@ package com.shohiebsense.loclib.service
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
 import android.os.Parcelable
@@ -15,7 +17,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.shohiebsense.loclib.FusedLocationResult
@@ -27,14 +31,18 @@ import java.util.*
 
 class LocationService(
     var listener: LocationServiceListener,
-    var context: AppCompatActivity) : Observer {
+    var context: AppCompatActivity) : Observer, GoogleApiClient.ConnectionCallbacks,
+    GoogleApiClient.OnConnectionFailedListener,  LocationListener {
 
+    //Not using GoogleAPICLIENT Anymore
+    //Not using Fusedlocationprovider client
+    //Instead using locationManager
 
 
     companion object {
         val REQUEST_CODE_PERMISSION = 33
         val SETTINGS_REQUEST_CODE = 0X1
-        val UPDATE_INTERVAL_IN_MS = 1000L
+        val UPDATE_INTERVAL_IN_MS = 8000L
         val FASTEST_UPDATE_INTERVAL_IN_MS = UPDATE_INTERVAL_IN_MS / 2
 
         val KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates"
@@ -42,7 +50,7 @@ class LocationService(
         val KEY_LAST_UPDATED_TIME_STRING = "last_updated_time_string"
     }
 
-    var fusedLocationProviderClient: FusedLocationProviderClient? = null
+    private var fusedLocationProviderClient: FusedLocationProviderClient? = null
     private var settingsClient: SettingsClient? = null
     private var locationRequest: LocationRequest? = null
     private var locationSettingsRequest: LocationSettingsRequest? = null
@@ -51,9 +59,12 @@ class LocationService(
     private var currentLocation: Location? = null
     private var lastUpdateTime: String? = ""
     private var savedInstanceState: Bundle? = null
-    var isExecuting = false
+    private var isExecuting = false
     private var isImmediateExit = false
-    val fusedLocationResult = FusedLocationResult(context)
+    private val fusedLocationResult = FusedLocationResult(context)
+
+    private var mGoogleApiClient: GoogleApiClient? = null
+    private var locationManager : LocationManager? = null
 
     val isLocationPermissionGranted: Boolean
         get() {
@@ -77,7 +88,8 @@ class LocationService(
         createLocationRequest()
         buildLocationSettingsRequest()
         LocationResultObservable.instance.addObserver(this)
-
+        //buildGoogleApiClient()
+        locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return this
     }
 
@@ -126,7 +138,9 @@ class LocationService(
         locationRequest = LocationRequest()
         locationRequest!!.interval = UPDATE_INTERVAL_IN_MS
         locationRequest!!.fastestInterval = FASTEST_UPDATE_INTERVAL_IN_MS
-        locationRequest!!.priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
+        locationRequest!!.priority = LocationRequest.PRIORITY_NO_POWER
+        locationRequest!!.smallestDisplacement = 5F
+        locationRequest!!.maxWaitTime = UPDATE_INTERVAL_IN_MS
     }
 
     private fun getPendingIntent(): PendingIntent {
@@ -141,13 +155,40 @@ class LocationService(
         locationSettingsRequest = builder.build()
     }
 
+    /*private fun buildGoogleApiClient() {
+        if (mGoogleApiClient != null) {
+            return
+        }
+        mGoogleApiClient = GoogleApiClient.Builder(context)
+            .addConnectionCallbacks(this)
+            .enableAutoManage(context, this)
+            .addApi(LocationServices.API)
+            .build()
+    }*/
+
+
     fun onDestroy() {
         if(fusedLocationProviderClient == null) return
-        fusedLocationProviderClient!!.removeLocationUpdates(getPendingIntent())
+        //#OPT 1
+        LocationRequestHelper.setRequesting(context, false)
+        locationManager?.removeUpdates(getPendingIntent())
+
+        /*if(mGoogleApiClient!!.isConnected){
+            LocationServices.FusedLocationApi.removeLocationUpdates(
+                mGoogleApiClient,
+                getPendingIntent()
+            )
+        }*/
+
+
+
+
+        //#OPT 2
+        /*fusedLocationProviderClient!!.removeLocationUpdates(getPendingIntent())
             .addOnCompleteListener {
 
                 LocationRequestHelper.setRequesting(context, false)
-            }
+            }*/
     }
 
 
@@ -156,6 +197,7 @@ class LocationService(
         if (isLocationPermissionGranted) {
             LocationRequestHelper.getIsRequesting(context)
             startLocationUpates()
+            Log.e("locations","start location updates")
         } else if (!isLocationPermissionGranted) {
             Toast.makeText(context, "Location Permission Is Not Accepted", Toast.LENGTH_SHORT).show()
             return
@@ -166,14 +208,29 @@ class LocationService(
     @SuppressLint("MissingPermission")
     internal fun startLocationUpates() {
         LocationRequestHelper.setRequesting(context, true)
+        //$0 OPTION 0
+        locationManager!!.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER, 4000, 10F, getPendingIntent()
+        )
 
-        settingsClient!!.checkLocationSettings(locationSettingsRequest)
+        //#1 OPTION 1
+
+        /*if(mGoogleApiClient!!.isConnected){
+            Log.e("loc ser","is connected true")
+            LocationServices.FusedLocationApi.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, 0,0, getPendingIntent()
+            )
+        }
+        else{
+            Log.e("loc servi","not conn")
+        }
+*/
+
+        //#OPTION 2
+
+        /*settingsClient!!.checkLocationSettings(locationSettingsRequest)
             .addOnSuccessListener {
-                /*fusedLocationProviderClient!!.requestLocationUpdates(
-                    locationRequest,
-                    locationCallback,
-                    Looper.myLooper()
-                )*/
+                Log.e("locations ","settings client succ")
                 fusedLocationProviderClient!!.requestLocationUpdates(
                     locationRequest,
                     getPendingIntent()
@@ -184,12 +241,13 @@ class LocationService(
                     LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> try {
                         (e as ResolvableApiException).startResolutionForResult(context, SETTINGS_REQUEST_CODE)
                     } catch (exception: IntentSender.SendIntentException) {
-
+                        Log.e("exception ",exception.toString())
                     }
 
                 }
             }.addOnCompleteListener {
-            }
+                Log.e("complete ","settings client succ")
+            }*/
     }
 
 
@@ -221,12 +279,44 @@ class LocationService(
         return time
     }
 
+    fun getDate() : String{
+        var date = fusedLocationResult.getDate()
+        if(date.isEmpty()){
+            updateLocationAndExit()
+        }
+        return date
+    }
+
+
     override fun update(p0: Observable?, p1: Any?) {
         val latitude = getLatitude()
         val longitude = getLongitude()
         val time = getTime()
-        listener.onGettingLocation(false, time, latitude, longitude)
+        val date = getDate()
+        listener.onGettingLocation(false, "$date $time" , latitude, longitude)
     }
+
+    override fun onConnectionFailed(p0: ConnectionResult) {
+        Log.e("LocationSer ","failed conn")
+
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun onConnected(p0: Bundle?) {
+        Log.e("LocationSer ","onConnected")
+        /*LocationServices.FusedLocationApi.requestLocationUpdates(
+            mGoogleApiClient, locationRequest, this
+        )*/
+    }
+
+    override fun onConnectionSuspended(p0: Int) {
+        Log.e("LocationSer ","conn susp")
+    }
+
+    override fun onLocationChanged(location: Location?) {
+        Log.e("locservic","long "+location!!.longitude+"  "+location!!.latitude)
+    }
+
 
 
 }

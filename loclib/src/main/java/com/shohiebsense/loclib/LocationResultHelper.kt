@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat
 class LocationResultHelper(val context : Context, val locationList : List<Location>) {
     val preferenceManager = PreferenceManager(context)
     val CURRENT_TIMESTAMP_FORMAT = "HH:mm:ss"
+    val CURRENT_DATE_FORMAT = "yyyy-MM-dd"
 
     fun saveResult(){
         if(locationList.isEmpty()){
@@ -17,13 +18,14 @@ class LocationResultHelper(val context : Context, val locationList : List<Locati
         val location = locationList.last()
         preferenceManager.saveLatitude(location.latitude.toString())
         preferenceManager.saveLongitude(location.longitude.toString())
-        preferenceManager.saveTime(longToTimeStamp(location.time))
+        preferenceManager.saveTime(longToTimeStamp(location.time, CURRENT_TIMESTAMP_FORMAT))
+        preferenceManager.saveDate(longToTimeStamp(location.time, CURRENT_DATE_FORMAT))
     }
 
 
-    fun longToTimeStamp(timeStamp : Long) : String{
+    fun longToTimeStamp(timeStamp : Long, format: String) : String{
         try {
-            val sdf = SimpleDateFormat(CURRENT_TIMESTAMP_FORMAT)
+            val sdf = SimpleDateFormat(format)
             val netDate = Date(timeStamp)
             return sdf.format(netDate)
         } catch (ex: Exception) {
