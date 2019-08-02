@@ -15,7 +15,7 @@ In your app level gradle:
 
 ```
 dependencies{
-    implementation 'com.shohiebsense.loclib:fusedlocationbackground:0.9.51'
+    implementation 'com.shohiebsense.loclib:fusedlocationbackground:1.0.1'
 }
 ```
 Usage
