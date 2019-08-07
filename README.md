@@ -15,7 +15,7 @@ In your app level gradle:
 
 ```
 dependencies{
-    implementation 'com.shohiebsense.loclib:fusedlocationbackground:1.0.1'
+    implementation 'com.shohiebsense.loclib:fusedlocationbackground:1.0.4'
 }
 ```
 Usage
@@ -43,7 +43,7 @@ In your activity file, implement LocationService.LocationServiceListener :
   lateinit var locationService : LocationService
 
    override fun onCreate(savedInstanceState: Bundle?) {
-          locationService = LocationService(this,this).init()
+          locationService = LocationService(this,this).setPriority(LocationService.Companion.getPRIORITY_BALANCED_POWER_ACCURACY()).init();
    }
    
     override fun onResume() {
