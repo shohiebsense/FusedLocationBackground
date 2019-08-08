@@ -40,30 +40,20 @@ Of course you have to add ACCESS_FINE_LOCATION permission
 In your activity file, implement LocationService.LocationServiceListener :
 
 ```
-    lateinit var locationServiceHelper : LocationServiceHelper
+  lateinit var locationService : LocationService
 
    override fun onCreate(savedInstanceState: Bundle?) {
-               locationServiceHelper = LocationServiceHelper(this, this)
+          locationService = LocationService(this,this).setPriority(LocationService.Companion.getPRIORITY_BALANCED_POWER_ACCURACY()).init();
    }
    
-    override fun onStart() {
-        super.onStart()
-        locationServiceHelper.onStart()
-    }
-
-    override fun onPause() {
-        locationServiceHelper.onPause()
-        super.onPause()
-    }
-
     override fun onResume() {
         super.onResume()
-        locationServiceHelper.onResume()
+        locationService.onResume()
     }
 
-    override fun onStop() {
-        locationServiceHelper.onStop()
-        super.onStop()
+    override fun onDestroy() {
+        locationService.onDestroy()
+        super.onDestroy()
     }
     
      override fun onGettingLocation(isImmediateExit: Boolean, time: String, latitude: String, longitude: String) {
@@ -72,5 +62,3 @@ In your activity file, implement LocationService.LocationServiceListener :
 
 
  ```
- 
- 
